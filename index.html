@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Flaggfall">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0d1530">
+<meta name="description" content="Lägg tre likadana flaggor i rad så försvinner de.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<title>Flaggfall</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;overflow:hidden;background:#0d1530;color:#fff;
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    user-select:none;-webkit-user-select:none;touch-action:none}
+  body{padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    display:flex;flex-direction:column;
+    background:linear-gradient(180deg,#0d1530,#1a2452 70%,#27306b)}
+  .hud{display:flex;justify-content:space-between;align-items:center;gap:10px;
+    padding:12px 16px 8px;flex:none}
+  .stat{min-width:64px}
+  .label{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:#93a3dc;margin-bottom:3px}
+  .val{font-size:24px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+  .val.small{font-size:18px}
+  .next{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.07);
+    border-radius:12px;padding:6px 10px}
+  .next canvas{width:36px;height:36px;display:block}
+  .next .name{font-size:13px;font-weight:700;min-width:62px}
+  .right{text-align:right}
+  .tools{flex:none;display:flex;justify-content:space-between;padding:0 16px 2px}
+  .tools button{font:inherit;font-size:13px;font-weight:700;color:#c0caf2;height:32px;padding:0 14px;
+    background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:999px}
+  .tools button:active{background:rgba(255,255,255,.18)}
+  .coins{font-size:15px;font-weight:800;color:#ffd166;align-self:center;font-variant-numeric:tabular-nums}
+  .overlay.shop{justify-content:flex-start;overflow-y:auto;padding:22px 18px 30px;touch-action:pan-y}
+  .shop h3{font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:#93a3dc;
+    margin:18px 0 8px;width:100%;max-width:420px;text-align:left}
+  .items{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;max-width:420px}
+  .item{background:rgba(255,255,255,.07);border:2px solid transparent;border-radius:14px;padding:10px;
+    color:#fff;font:inherit;text-align:center}
+  .item.sel{border-color:#ffd166}
+  .item:disabled{opacity:.55}
+  .item .sw{height:52px;border-radius:9px;margin-bottom:8px;display:flex;align-items:center;
+    justify-content:center;font-size:26px;background:rgba(255,255,255,.06)}
+  .item .nm{font-weight:700;font-size:14px}
+  .item .pr{font-size:12px;color:#ffd166;margin-top:3px;min-height:15px}
+  .note{color:#93a3dc;font-size:12px;line-height:1.5;max-width:420px;margin:10px 0 20px}
+  .wrap{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:4px 10px}
+  #c{display:block;touch-action:none}
+  .controls{flex:none;display:flex;gap:10px;padding:8px 14px 16px;justify-content:center}
+  .controls button{flex:1;max-width:150px;height:58px;font-size:24px;font-weight:800;color:#fff;
+    background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.14);border-radius:16px;
+    box-shadow:none;padding:0}
+  .controls button.drop{background:linear-gradient(180deg,#ffd166,#ffb703);color:#1b1400;border:0;
+    font-size:17px}
+  .controls button:active{transform:scale(.96);background:rgba(255,255,255,.2)}
+  .controls button.drop:active{background:#ffb703}
+  .overlay{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;
+    justify-content:center;text-align:center;padding:28px;z-index:3;
+    background:rgba(9,14,36,.9)}
+  .overlay.hidden{display:none}
+  h1{font-size:46px;font-weight:900;letter-spacing:-1px;line-height:1;margin-bottom:12px;
+    background:linear-gradient(180deg,#fff3b0,#ffb703);-webkit-background-clip:text;
+    background-clip:text;color:transparent}
+  .sub{color:#c0caf2;font-size:16px;line-height:1.5;max-width:310px;margin-bottom:22px}
+  .how{color:#93a3dc;font-size:14px;line-height:1.7;margin-bottom:28px}
+  .big{font:inherit;font-weight:800;font-size:18px;color:#1b1400;border:0;cursor:pointer;
+    padding:16px 44px;border-radius:999px;background:linear-gradient(180deg,#ffd166,#ffb703);
+    box-shadow:0 8px 28px rgba(255,183,3,.35)}
+  .big:active{transform:scale(.97)}
+  .ghost{font:inherit;font-weight:700;font-size:15px;color:#c0caf2;background:none;
+    border:1px solid rgba(255,255,255,.25);border-radius:999px;padding:11px 28px;margin-top:14px}
+  .ghost:active{background:rgba(255,255,255,.1)}
+  .demobar{position:fixed;left:0;right:0;bottom:0;height:92px;z-index:2;display:flex;
+    align-items:center;justify-content:center;text-align:center;font-weight:800;font-size:16px;
+    color:#1b1400;background:linear-gradient(180deg,#ffd166,#ffb703)}
+  .demobar.hidden{display:none}
+  .final{font-size:64px;font-weight:900;line-height:1;margin:6px 0 4px;font-variant-numeric:tabular-nums}
+  .record{color:#ffd166;font-weight:700;font-size:15px;min-height:22px;margin-bottom:26px}
+</style>
+</head>
+<body>
+
+<div class="hud">
+  <div class="stat">
+    <div class="label">Poäng</div>
+    <div class="val" id="score">0</div>
+  </div>
+  <div class="next">
+    <canvas id="nextCv" width="72" height="72"></canvas>
+    <div>
+      <div class="label">Nästa</div>
+      <div class="name" id="nextName">–</div>
+    </div>
+  </div>
+  <div class="stat right">
+    <div class="label">Nivå <span id="level">1</span></div>
+    <div class="val small">🏆 <span id="best">0</span></div>
+  </div>
+</div>
+
+<div class="tools">
+  <button id="pauseBtn">⏸ Paus</button>
+  <span class="coins">🪙 <span id="coins">0</span></span>
+  <button id="soundBtn">🔊 Ljud på</button>
+</div>
+
+<div class="wrap" id="wrap"><canvas id="c"></canvas></div>
+
+<div class="controls">
+  <button id="leftBtn" aria-label="Vänster">◀</button>
+  <button id="dropBtn" class="drop" aria-label="Släpp">⬇ Släpp</button>
+  <button id="rightBtn" aria-label="Höger">▶</button>
+</div>
+
+<div class="overlay" id="menu">
+  <h1>Flaggfall</h1>
+  <p class="sub">Flaggorna faller en i taget. Lägg tre likadana i rad så försvinner de.</p>
+  <p class="how">👆 Dra över brädet eller använd pilarna<br>⬇ Släpp flaggan direkt med knappen<br>↔ ↕ Tre i rad räknas vågrätt och lodrätt</p>
+  <button class="big" id="startBtn">Starta</button>
+  <button class="ghost" id="shopBtn1">🛍 Butik</button>
+</div>
+
+<div class="demobar hidden" id="demoBar">DEMO · tryck här för att spela själv</div>
+
+<div class="overlay hidden" id="paused">
+  <h1>Pausat</h1>
+  <p class="sub">Spelet väntar på dig.</p>
+  <button class="big" id="resumeBtn">Fortsätt</button>
+</div>
+
+<div class="overlay hidden" id="over">
+  <div class="label">Spelet slut</div>
+  <div class="final" id="final">0</div>
+  <div class="record" id="record"></div>
+  <button class="big" id="contBtn" style="margin-bottom:12px">Fortsätt</button>
+  <button class="big" id="againBtn">Spela igen</button>
+  <button class="ghost" id="shopBtn2">🛍 Butik</button>
+</div>
+
+<div class="overlay shop hidden" id="shop">
+  <h1 style="font-size:34px">Butik</h1>
+  <div class="coins" style="font-size:20px">🪙 <span id="shopCoins">0</span></div>
+  <p class="note" style="margin:8px 0 0">Du får coins när du slår ditt eget rekord. Ju mer du slår det med, desto fler.</p>
+  <h3>Bakgrunder</h3>
+  <div class="items" id="bgItems"></div>
+  <h3>Effekter</h3>
+  <div class="items" id="fxItems"></div>
+  <h3>Köp coins</h3>
+  <div class="items">
+    <button class="item" disabled><div class="sw">🪙</div><div class="nm">200 coins</div><div class="pr">Kommer snart</div></button>
+  </div>
+  <p class="note">Köp med riktiga pengar slås på när spelet finns på Google Play.</p>
+  <button class="big" id="shopClose">Stäng</button>
+</div>
+
+<script>
+(function(){
+  var COLS=6,ROWS=9,SPAWN=2;
+  var NAMES=['Sverige','Japan','Tyskland','Frankrike','Italien','Ukraina','Danmark','Finland','Albanien','Kosovo',
+    'Norge','Schweiz','Turkiet','Polen'];
+  var MAXTYPES=8;
+  var ORDER=[8,9,0,1,2,3,4,5]; // Albanien och Kosovo är alltid med; resten lottas vid start
+  var KOSOVO=[[.38,.42],[.47,.38],[.52,.43],[.60,.41],[.66,.48],[.72,.52],[.66,.60],[.62,.70],
+    [.54,.72],[.48,.80],[.42,.72],[.36,.66],[.30,.58],[.34,.50]];
+  var EAGLE=[[0,.30],[.04,.22],[.09,.17],[.17,.19],[.11,.22],[.07,.27],[.10,.30],[.30,.20],[.27,.30],
+    [.36,.30],[.29,.38],[.37,.42],[.28,.46],[.34,.53],[.22,.52],[.10,.48],[.14,.56],[.24,.62],
+    [.15,.63],[.20,.70],[.10,.64],[.07,.60],[.06,.68],[.12,.80],[.05,.76],[0,.84]];
+
+  var cv=document.getElementById('c'),ctx=cv.getContext('2d'),wrap=document.getElementById('wrap');
+  var nextCv=document.getElementById('nextCv'),nctx=nextCv.getContext('2d');
+  var elScore=document.getElementById('score'),elLevel=document.getElementById('level'),
+      elBest=document.getElementById('best'),elNextName=document.getElementById('nextName'),
+      elMenu=document.getElementById('menu'),elOver=document.getElementById('over'),
+      elFinal=document.getElementById('final'),elRecord=document.getElementById('record');
+
+  var cell=40,BW=0,BH=0,dpr=1;
+  var grid=[],piece=null,nextType=0;
+  var state='menu',phase='fall',timer=0,clearing=[],chain=0;
+  var score=0,cleared=0,level=1,best=0,softDrop=false,audio=null,popups=[];
+  var BGS=[
+    {id:'natt',name:'Natt',price:0,css:'linear-gradient(180deg,#0d1530,#1a2452 70%,#27306b)'},
+    {id:'solnedgang',name:'Solnedgång',price:200,css:'linear-gradient(180deg,#2b1055,#b5367a 60%,#ff8a4c)'},
+    {id:'skog',name:'Skog',price:200,css:'linear-gradient(180deg,#06231c,#0f4a3a 65%,#2f7d4f)'},
+    {id:'hav',name:'Hav',price:200,css:'linear-gradient(180deg,#03203c,#075985 60%,#22b8cf)'}
+  ];
+  var FXS=[
+    {id:'standard',name:'Standard',price:0,icon:'✨'},
+    {id:'konfetti',name:'Konfetti',price:200,icon:'🎉'},
+    {id:'gnistor',name:'Guldgnistor',price:200,icon:'🌟'}
+  ];
+  var CONT_START=30;
+  var save={coins:0,owned:['natt','standard'],bg:'natt',fx:'standard'};
+  try{
+    var raw=localStorage.getItem('flaggfall-save');
+    if(raw){
+      var o=JSON.parse(raw);
+      if(o&&typeof o.coins==='number'&&o.coins>=0)save.coins=Math.floor(o.coins);
+      if(o&&Array.isArray(o.owned))save.owned=o.owned;
+      if(o&&typeof o.bg==='string')save.bg=o.bg;
+      if(o&&typeof o.fx==='string')save.fx=o.fx;
+    }
+  }catch(e){}
+  function persist(){try{localStorage.setItem('flaggfall-save',JSON.stringify(save));}catch(e){}}
+  function owns(id){return id==='natt'||id==='standard'||save.owned.indexOf(id)>=0;}
+  var contCost=CONT_START,parts=[],pendingBuy='';
+  var elCoins=document.getElementById('coins'),elShopCoins=document.getElementById('shopCoins'),
+      elShop=document.getElementById('shop'),elCont=document.getElementById('contBtn');
+  function showCoins(){elCoins.textContent=save.coins;elShopCoins.textContent=save.coins;}
+  function applyBg(){
+    var css=BGS[0].css;
+    for(var i=0;i<BGS.length;i++)if(BGS[i].id===save.bg&&owns(save.bg))css=BGS[i].css;
+    document.body.style.background=css;
+  }
+  function shopList(listId,items,key){
+    var box=document.getElementById(listId);
+    box.innerHTML='';
+    items.forEach(function(it){
+      var b=document.createElement('button');
+      b.className='item'+(save[key]===it.id?' sel':'');
+      var sw=document.createElement('div');sw.className='sw';
+      if(it.css)sw.style.background=it.css;else sw.textContent=it.icon;
+      var nm=document.createElement('div');nm.className='nm';nm.textContent=it.name;
+      var pr=document.createElement('div');pr.className='pr';
+      if(save[key]===it.id)pr.textContent='Vald';
+      else if(owns(it.id))pr.textContent='Tryck för att välja';
+      else if(pendingBuy===it.id)pr.textContent=save.coins>=it.price?'Tryck igen för att köpa':'För få coins';
+      else pr.textContent=it.price+' 🪙';
+      b.appendChild(sw);b.appendChild(nm);b.appendChild(pr);
+      b.addEventListener('click',function(){
+        if(owns(it.id)){save[key]=it.id;pendingBuy='';}
+        else if(pendingBuy===it.id&&save.coins>=it.price){
+          save.coins-=it.price;save.owned.push(it.id);save[key]=it.id;pendingBuy='';
+          beep(660,.18,'triangle',.08,1320);
+        }else{pendingBuy=it.id;}
+        persist();applyBg();showCoins();renderShop();
+      });
+      box.appendChild(b);
+    });
+  }
+  function renderShop(){shopList('bgItems',BGS,'bg');shopList('fxItems',FXS,'fx');}
+  function showContinue(){
+    var can=state==='over'&&save.coins>=contCost;
+    elCont.style.display=can?'':'none';
+    elCont.textContent='Fortsätt ('+contCost+' 🪙)';
+  }
+  function openShop(){pendingBuy='';showCoins();renderShop();elShop.classList.remove('hidden');}
+  function closeShop(){elShop.classList.add('hidden');showContinue();}
+  function continueGame(){
+    if(state!=='over'||save.coins<contCost)return;
+    save.coins-=contCost;persist();showCoins();contCost*=2;
+    for(var r=0;r<5;r++)for(var c=0;c<COLS;c++)grid[r][c]=-1;   // rensa de fem översta raderna
+    clearing=[];popups=[];chain=0;
+    state='play';elOver.classList.add('hidden');showContinue();
+    beep(440,.15,'triangle',.08,880);
+    spawn();
+  }
+  function burst(cells){
+    if(save.fx==='standard'||!owns(save.fx))return;
+    var cols=save.fx==='konfetti'?['#ff5d73','#ffd166','#06d6a0','#4cc9f0','#b388ff']:['#ffd166','#fff3b0','#ffb703'];
+    for(var i=0;i<cells.length;i++){
+      var cx=(cells[i]%COLS+.5)*cell,cy=(Math.floor(cells[i]/COLS)+.5)*cell;
+      for(var n=0;n<9;n++){
+        var a=Math.random()*6.2832,sp=(60+Math.random()*200)*cell/50;
+        parts.push({x:cx,y:cy,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-60,life:.5+Math.random()*.5,
+          c:cols[Math.floor(Math.random()*cols.length)],r:(2+Math.random()*3)*cell/50,
+          sq:save.fx==='konfetti',rot:Math.random()*6});
+      }
+    }
+  }
+
+  var muted=false;
+  try{muted=localStorage.getItem('flaggfall-muted')==='1';}catch(e){}
+  var demo=false,demoTarget=0,demoTimer=0,elDemoBar=document.getElementById('demoBar');
+
+  try{best=parseInt(localStorage.getItem('flaggfall-best')||'0',10)||0;}catch(e){}
+  elBest.textContent=best;
+
+  function resize(){
+    dpr=Math.min(window.devicePixelRatio||1,2);
+    var aw=wrap.clientWidth-20,ah=wrap.clientHeight-8;
+    cell=Math.max(20,Math.floor(Math.min(aw/COLS,ah/ROWS,72)));
+    BW=cell*COLS;BH=cell*ROWS;
+    cv.style.width=BW+'px';cv.style.height=BH+'px';
+    cv.width=Math.round(BW*dpr);cv.height=Math.round(BH*dpr);
+  }
+  window.addEventListener('resize',resize);
+
+  /* ---------- flaggor ---------- */
+  function rr(c,x,y,w,h,r){
+    c.beginPath();c.moveTo(x+r,y);c.lineTo(x+w-r,y);c.quadraticCurveTo(x+w,y,x+w,y+r);
+    c.lineTo(x+w,y+h-r);c.quadraticCurveTo(x+w,y+h,x+w-r,y+h);c.lineTo(x+r,y+h);
+    c.quadraticCurveTo(x,y+h,x,y+h-r);c.lineTo(x,y+r);c.quadraticCurveTo(x,y,x+r,y);c.closePath();
+  }
+  function cross(c,x,y,s,bg,fg){
+    c.fillStyle=bg;c.fillRect(x,y,s,s);
+    c.fillStyle=fg;c.fillRect(x+s*.28,y,s*.18,s);c.fillRect(x,y+s*.41,s,s*.18);
+  }
+  function stripesV(c,x,y,s,cols){
+    for(var i=0;i<3;i++){c.fillStyle=cols[i];c.fillRect(x+s*i/3-.5,y,s/3+1,s);}
+  }
+  function drawFlag(c,type,x,y,s){
+    c.save();
+    rr(c,x,y,s,s,s*.14);c.clip();
+    switch(type){
+      case 0:cross(c,x,y,s,'#006AA7','#FECC00');break;                         // Sverige
+      case 1:c.fillStyle='#fff';c.fillRect(x,y,s,s);                            // Japan
+             c.fillStyle='#BC002D';c.beginPath();c.arc(x+s/2,y+s/2,s*.28,0,6.2832);c.fill();break;
+      case 2:c.fillStyle='#111';c.fillRect(x,y,s,s/3+1);                        // Tyskland
+             c.fillStyle='#DD0000';c.fillRect(x,y+s/3,s,s/3+1);
+             c.fillStyle='#FFCE00';c.fillRect(x,y+s*2/3,s,s/3+1);break;
+      case 3:stripesV(c,x,y,s,['#0055A4','#fff','#EF4135']);break;              // Frankrike
+      case 4:stripesV(c,x,y,s,['#009246','#fff','#CE2B37']);break;              // Italien
+      case 5:c.fillStyle='#0057B7';c.fillRect(x,y,s,s/2+1);                     // Ukraina
+             c.fillStyle='#FFD700';c.fillRect(x,y+s/2,s,s/2+1);break;
+      case 6:cross(c,x,y,s,'#C8102E','#fff');break;                             // Danmark
+      case 7:cross(c,x,y,s,'#fff','#003580');break;                             // Finland
+      case 8:c.fillStyle='#E41E20';c.fillRect(x,y,s,s);                         // Albanien
+             c.fillStyle='#111';c.beginPath();
+             var i,p;
+             for(i=0;i<EAGLE.length;i++){p=EAGLE[i];c.lineTo(x+s*(.5+p[0]),y+s*p[1]);}
+             for(i=EAGLE.length-1;i>=0;i--){p=EAGLE[i];c.lineTo(x+s*(.5-p[0]),y+s*p[1]);}
+             c.closePath();c.fill();break;
+      case 9:c.fillStyle='#244AA5';c.fillRect(x,y,s,s);                         // Kosovo
+             c.fillStyle='#D0A650';c.beginPath();
+             var q,n,a,sx,sy,rad;
+             for(q=0;q<KOSOVO.length;q++)c.lineTo(x+s*KOSOVO[q][0],y+s*KOSOVO[q][1]);
+             c.closePath();c.fill();
+             c.fillStyle='#fff';
+             for(n=0;n<6;n++){
+               a=(-135+n*18)*Math.PI/180;sx=x+s*(.5+.4*Math.cos(a));sy=y+s*(.62+.4*Math.sin(a));
+               c.beginPath();
+               for(q=0;q<10;q++){
+                 rad=s*(q%2?.022:.052);
+                 c.lineTo(sx+Math.cos(q*Math.PI/5-Math.PI/2)*rad,sy+Math.sin(q*Math.PI/5-Math.PI/2)*rad);
+               }
+               c.closePath();c.fill();
+             }
+             break;
+      case 10:c.fillStyle='#BA0C2F';c.fillRect(x,y,s,s);                        // Norge
+             c.fillStyle='#fff';c.fillRect(x+s*.24,y,s*.22,s);c.fillRect(x,y+s*.39,s,s*.22);
+             c.fillStyle='#00205B';c.fillRect(x+s*.30,y,s*.10,s);c.fillRect(x,y+s*.45,s,s*.10);break;
+      case 11:c.fillStyle='#DA291C';c.fillRect(x,y,s,s);                        // Schweiz
+             c.fillStyle='#fff';c.fillRect(x+s*.41,y+s*.2,s*.18,s*.6);c.fillRect(x+s*.2,y+s*.41,s*.6,s*.18);break;
+      case 12:c.fillStyle='#E30A17';c.fillRect(x,y,s,s);                        // Turkiet
+             c.fillStyle='#fff';c.beginPath();c.arc(x+s*.42,y+s*.5,s*.25,0,6.2832);c.fill();
+             c.fillStyle='#E30A17';c.beginPath();c.arc(x+s*.49,y+s*.5,s*.2,0,6.2832);c.fill();
+             c.fillStyle='#fff';c.beginPath();
+             var u,ur;
+             for(u=0;u<10;u++){
+               ur=s*(u%2?.045:.11);
+               c.lineTo(x+s*.70+Math.cos(u*Math.PI/5+Math.PI)*ur,y+s*.5+Math.sin(u*Math.PI/5+Math.PI)*ur);
+             }
+             c.closePath();c.fill();break;
+      case 13:c.fillStyle='#fff';c.fillRect(x,y,s,s/2+1);                       // Polen
+             c.fillStyle='#DC143C';c.fillRect(x,y+s/2,s,s/2+1);break;
+    }
+    // lätt glans
+    var g=c.createLinearGradient(x,y,x,y+s);
+    g.addColorStop(0,'rgba(255,255,255,.18)');g.addColorStop(.5,'rgba(255,255,255,0)');
+    g.addColorStop(1,'rgba(0,0,0,.14)');
+    c.fillStyle=g;c.fillRect(x,y,s,s);
+    c.restore();
+    rr(c,x+.5,y+.5,s-1,s-1,s*.14);
+    c.lineWidth=1;c.strokeStyle='rgba(0,0,0,.35)';c.stroke();
+  }
+
+  /* ---------- ljud ---------- */
+  function initAudio(){
+    if(audio)return;
+    try{var AC=window.AudioContext||window.webkitAudioContext;if(AC)audio=new AC();}catch(e){audio=null;}
+  }
+  function beep(freq,dur,type,vol,slide){
+    if(!audio||muted)return;
+    try{
+      var o=audio.createOscillator(),g=audio.createGain(),n=audio.currentTime;
+      o.type=type||'sine';o.frequency.setValueAtTime(freq,n);
+      if(slide)o.frequency.exponentialRampToValueAtTime(slide,n+dur);
+      g.gain.setValueAtTime(vol||.07,n);g.gain.exponentialRampToValueAtTime(.0001,n+dur);
+      o.connect(g);g.connect(audio.destination);o.start(n);o.stop(n+dur);
+    }catch(e){}
+  }
+
+  /* ---------- logik ---------- */
+  function landingRow(c){
+    for(var r=0;r<ROWS;r++){if(grid[r][c]!==-1)return r-1;}
+    return ROWS-1;
+  }
+  function typeCount(){return Math.min(MAXTYPES,ORDER.length,4+Math.floor((level-1)/2));}
+  function randType(){return ORDER[Math.floor(Math.random()*typeCount())];}
+
+  function showNext(){
+    nctx.clearRect(0,0,72,72);
+    drawFlag(nctx,nextType,2,2,68);
+    elNextName.textContent=NAMES[nextType];
+  }
+  function updateHud(){
+    elScore.textContent=score;elLevel.textContent=level;
+  }
+
+  function spawn(){
+    piece={c:SPAWN,y:-1,type:nextType};
+    nextType=randType();showNext();
+    phase='fall';
+    if(landingRow(SPAWN)<0){piece=null;gameOver();return;}
+    if(demo){demoTarget=chooseCol();demoTimer=.4;}
+  }
+
+  function chooseCol(){
+    var bestC=piece.c,bestS=-1e9,t=piece.type;
+    for(var c=0;c<COLS;c++){
+      var lr=landingRow(c);if(lr<0)continue;
+      grid[lr][c]=t;var m=findMatches().length;grid[lr][c]=-1;
+      var adj=0;
+      if(lr+1<ROWS&&grid[lr+1][c]===t)adj++;
+      if(c>0&&grid[lr][c-1]===t)adj++;
+      if(c<COLS-1&&grid[lr][c+1]===t)adj++;
+      var sc=m*100+adj*10+lr*2+Math.random();
+      if(sc>bestS){bestS=sc;bestC=c;}
+    }
+    return bestC;
+  }
+  function endDemo(){
+    demo=false;state='menu';piece=null;clearing=[];
+    elDemoBar.classList.add('hidden');elMenu.classList.remove('hidden');
+  }
+
+  function move(d){
+    if(state!=='play'||phase!=='fall'||!piece)return false;
+    var nc=piece.c+d;
+    if(nc<0||nc>=COLS)return false;
+    if(landingRow(nc)<Math.max(0,Math.ceil(piece.y)))return false;
+    piece.c=nc;return true;
+  }
+  function moveTo(col){
+    if(!piece)return;
+    var guard=COLS;
+    while(piece&&piece.c!==col&&guard-->0){
+      if(!move(col>piece.c?1:-1))break;
+    }
+  }
+  function hardDrop(){
+    if(state!=='play'||phase!=='fall'||!piece)return;
+    piece.y=landingRow(piece.c);lock();
+  }
+
+  function lock(){
+    var lr=landingRow(piece.c);
+    if(lr<0){piece=null;gameOver();return;}
+    grid[lr][piece.c]=piece.type;
+    piece=null;chain=0;
+    beep(220,.07,'square',.04);
+    resolve();
+  }
+
+  function findMatches(){
+    var mark={},r,c,t,k,j;
+    for(r=0;r<ROWS;r++)for(c=0;c<COLS;c++){
+      t=grid[r][c];if(t<0)continue;
+      if(c===0||grid[r][c-1]!==t){
+        k=c;while(k<COLS&&grid[r][k]===t)k++;
+        if(k-c>=3)for(j=c;j<k;j++)mark[r*COLS+j]=1;
+      }
+      if(r===0||grid[r-1][c]!==t){
+        k=r;while(k<ROWS&&grid[k][c]===t)k++;
+        if(k-r>=3)for(j=r;j<k;j++)mark[j*COLS+c]=1;
+      }
+    }
+    var out=[];for(var key in mark)out.push(+key);
+    return out;
+  }
+
+  function resolve(){
+    var m=findMatches();
+    if(m.length){
+      chain++;clearing=m;phase='clear';timer=.32;
+      var pts=m.length*10*chain;
+      score+=pts;cleared+=m.length;
+      level=1+Math.floor(cleared/9);
+      updateHud();
+      var sx=0,sy=0;
+      for(var i=0;i<m.length;i++){sx+=m[i]%COLS;sy+=Math.floor(m[i]/COLS);}
+      popups.push({x:(sx/m.length+.5)*cell,y:(sy/m.length+.5)*cell,
+        text:'+'+pts+(chain>1?'  ×'+chain:''),life:.9});
+      burst(m);
+      beep(520+chain*120,.16,'triangle',.08,1040+chain*160);
+    }else{
+      spawn();
+    }
+  }
+
+  function applyGravity(){
+    for(var c=0;c<COLS;c++){
+      var w=ROWS-1;
+      for(var r=ROWS-1;r>=0;r--){
+        if(grid[r][c]!==-1){
+          var t=grid[r][c];grid[r][c]=-1;grid[w][c]=t;w--;
+        }
+      }
+    }
+  }
+
+  function start(isDemo){
+    demo=isDemo===true;
+    elDemoBar.classList.toggle('hidden',!demo);
+    initAudio();
+    if(audio&&audio.state==='suspended'){try{audio.resume();}catch(e){}}
+    var pool=[],pi,pj,pt;
+    for(pi=0;pi<NAMES.length;pi++)if(pi!==8&&pi!==9)pool.push(pi);
+    for(pi=pool.length-1;pi>0;pi--){pj=Math.floor(Math.random()*(pi+1));pt=pool[pi];pool[pi]=pool[pj];pool[pj]=pt;}
+    ORDER=[8,9].concat(pool.slice(0,MAXTYPES-2));
+    elPaused.classList.add('hidden');
+    grid=[];
+    for(var r=0;r<ROWS;r++){grid.push([]);for(var c=0;c<COLS;c++)grid[r].push(-1);}
+    score=0;cleared=0;level=1;chain=0;clearing=[];popups=[];parts=[];softDrop=false;contCost=CONT_START;
+    state='play';
+    elMenu.classList.add('hidden');elOver.classList.add('hidden');
+    resize();updateHud();
+    nextType=randType();spawn();
+  }
+
+  function gameOver(){
+    if(demo){endDemo();return;}
+    state='over';
+    var isNew=score>best,reward=0;
+    if(isNew){
+      reward=Math.min(50,5+Math.floor((score-best)/20));
+      save.coins+=reward;persist();showCoins();
+      best=score;try{localStorage.setItem('flaggfall-best',String(best));}catch(e){}
+    }
+    elBest.textContent=best;elFinal.textContent=score;
+    elRecord.textContent=isNew?'🏆 Nytt rekord!  +'+reward+' 🪙':'Rekord: '+best;
+    showContinue();
+    beep(200,.5,'sawtooth',.08,60);
+    setTimeout(function(){if(state==='over')elOver.classList.remove('hidden');},500);
+  }
+
+  function update(dt){
+    for(var i=popups.length-1;i>=0;i--){
+      popups[i].life-=dt;popups[i].y-=30*dt;
+      if(popups[i].life<=0)popups.splice(i,1);
+    }
+    for(var q=parts.length-1;q>=0;q--){
+      var pa=parts[q];pa.x+=pa.vx*dt;pa.y+=pa.vy*dt;pa.vy+=520*dt;pa.rot+=dt*8;pa.life-=dt;
+      if(pa.life<=0)parts.splice(q,1);
+    }
+    if(state!=='play')return;
+    if(phase==='fall'&&piece){
+      if(demo){
+        demoTimer-=dt;
+        if(demoTimer<=0){
+          if(piece.c!==demoTarget){
+            if(!move(demoTarget>piece.c?1:-1))demoTarget=piece.c;
+            demoTimer=.14;
+          }else{hardDrop();return;}
+        }
+      }
+      var sp=softDrop?16:Math.min(7,1.5+(level-1)*.35);
+      piece.y+=sp*dt;
+      if(piece.y>=landingRow(piece.c)){piece.y=landingRow(piece.c);lock();}
+    }else if(phase==='clear'){
+      timer-=dt;
+      if(timer<=0){
+        for(var j=0;j<clearing.length;j++){
+          grid[Math.floor(clearing[j]/COLS)][clearing[j]%COLS]=-1;
+        }
+        clearing=[];applyGravity();phase='settle';timer=.14;
+      }
+    }else if(phase==='settle'){
+      timer-=dt;
+      if(timer<=0)resolve();
+    }
+  }
+
+  /* ---------- paus och ljud ---------- */
+  var elPaused=document.getElementById('paused'),elSound=document.getElementById('soundBtn');
+  function pause(){
+    if(state!=='play'||demo)return;
+    state='paused';dragging=false;softDrop=false;elPaused.classList.remove('hidden');
+  }
+  function resume(){
+    if(state!=='paused')return;
+    state='play';last=performance.now()/1000;elPaused.classList.add('hidden');
+  }
+  function showSound(){elSound.textContent=muted?'🔇 Ljud av':'🔊 Ljud på';}
+  showSound();
+  document.getElementById('pauseBtn').addEventListener('click',pause);
+  document.getElementById('resumeBtn').addEventListener('click',resume);
+  elSound.addEventListener('click',function(){
+    muted=!muted;showSound();
+    try{localStorage.setItem('flaggfall-muted',muted?'1':'0');}catch(e){}
+  });
+
+  /* ---------- ritning ---------- */
+  function draw(){
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.clearRect(0,0,BW,BH);
+    rr(ctx,0,0,BW,BH,10);ctx.fillStyle='rgba(6,10,28,.75)';ctx.fill();
+    var pad=Math.max(2,cell*.06),s=cell-pad*2,r,c;
+    // rutnät
+    ctx.fillStyle='rgba(255,255,255,.035)';
+    for(r=0;r<ROWS;r++)for(c=0;c<COLS;c++){
+      rr(ctx,c*cell+pad,r*cell+pad,s,s,s*.14);ctx.fill();
+    }
+    if(!grid.length)return;
+    // markerad kolumn + landningsplats
+    if(piece&&phase==='fall'){
+      ctx.fillStyle='rgba(255,255,255,.05)';
+      ctx.fillRect(piece.c*cell,0,cell,BH);
+      var lr=landingRow(piece.c);
+      if(lr>=0){
+        rr(ctx,piece.c*cell+pad+1,lr*cell+pad+1,s-2,s-2,s*.14);
+        ctx.setLineDash([5,5]);ctx.lineWidth=2;ctx.strokeStyle='rgba(255,255,255,.45)';ctx.stroke();
+        ctx.setLineDash([]);
+      }
+    }
+    var clr={},i;
+    for(i=0;i<clearing.length;i++)clr[clearing[i]]=1;
+    var prog=phase==='clear'?1-Math.max(0,timer)/.32:0;
+    for(r=0;r<ROWS;r++)for(c=0;c<COLS;c++){
+      var t=grid[r][c];if(t<0)continue;
+      var x=c*cell+pad,y=r*cell+pad;
+      if(clr[r*COLS+c]){
+        var k=1-prog*prog,ss=s*k;
+        ctx.globalAlpha=Math.max(0,1-prog*.6);
+        drawFlag(ctx,t,x+(s-ss)/2,y+(s-ss)/2,ss);
+        ctx.globalAlpha=Math.max(0,.7*(1-prog));
+        rr(ctx,x,y,s,s,s*.14);ctx.fillStyle='#fff';ctx.fill();
+        ctx.globalAlpha=1;
+      }else{
+        drawFlag(ctx,t,x,y,s);
+      }
+    }
+    if(piece){
+      ctx.save();
+      rr(ctx,0,0,BW,BH,10);ctx.clip();
+      drawFlag(ctx,piece.type,piece.c*cell+pad,piece.y*cell+pad,s);
+      ctx.restore();
+    }
+    for(i=0;i<parts.length;i++){
+      var pt=parts[i];
+      ctx.globalAlpha=Math.max(0,Math.min(1,pt.life*2.2));
+      ctx.fillStyle=pt.c;
+      if(pt.sq){
+        ctx.save();ctx.translate(pt.x,pt.y);ctx.rotate(pt.rot);
+        ctx.fillRect(-pt.r,-pt.r*.6,pt.r*2,pt.r*1.2);ctx.restore();
+      }else{
+        ctx.beginPath();ctx.arc(pt.x,pt.y,pt.r,0,6.2832);ctx.fill();
+      }
+    }
+    ctx.globalAlpha=1;
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.font='800 '+Math.round(cell*.5)+'px system-ui,sans-serif';
+    for(i=0;i<popups.length;i++){
+      var p=popups[i];
+      ctx.globalAlpha=Math.min(1,p.life*2);
+      ctx.lineWidth=4;ctx.strokeStyle='rgba(0,0,0,.6)';
+      var px=Math.max(cell,Math.min(BW-cell,p.x));
+      ctx.strokeText(p.text,px,p.y);
+      ctx.fillStyle='#ffd166';ctx.fillText(p.text,px,p.y);
+    }
+    ctx.globalAlpha=1;
+  }
+
+  /* ---------- styrning ---------- */
+  function colFromEvent(e){
+    var b=cv.getBoundingClientRect();
+    return Math.max(0,Math.min(COLS-1,Math.floor((e.clientX-b.left)/cell)));
+  }
+  var dragging=false;
+  cv.addEventListener('pointerdown',function(e){if(demo){endDemo();return;}dragging=true;moveTo(colFromEvent(e));});
+  cv.addEventListener('pointermove',function(e){if(dragging&&!demo)moveTo(colFromEvent(e));});
+  window.addEventListener('pointerup',function(){dragging=false;});
+  window.addEventListener('pointercancel',function(){dragging=false;});
+
+  function press(id,fn){
+    document.getElementById(id).addEventListener('pointerdown',function(e){e.preventDefault();fn();});
+  }
+  press('leftBtn',function(){move(-1);});
+  press('rightBtn',function(){move(1);});
+  press('dropBtn',hardDrop);
+
+  window.addEventListener('keydown',function(e){
+    if(demo){endDemo();return;}
+    if(state==='paused'){
+      if(e.key===' '||e.key==='Enter'||e.key==='p'||e.key==='Escape'){e.preventDefault();resume();}
+      return;
+    }
+    if(state!=='play'){
+      if(e.key===' '||e.key==='Enter'){e.preventDefault();start();}
+      return;
+    }
+    if(e.key==='p'||e.key==='Escape'){pause();return;}
+    if(e.key==='ArrowLeft'||e.key==='a'){move(-1);e.preventDefault();}
+    else if(e.key==='ArrowRight'||e.key==='d'){move(1);e.preventDefault();}
+    else if(e.key==='ArrowDown'||e.key==='s'){softDrop=true;e.preventDefault();}
+    else if(e.key===' '||e.key==='ArrowUp'){hardDrop();e.preventDefault();}
+  });
+  window.addEventListener('keyup',function(e){
+    if(e.key==='ArrowDown'||e.key==='s')softDrop=false;
+  });
+  document.addEventListener('touchmove',function(e){
+    if(e.target&&e.target.closest&&e.target.closest('.shop'))return;   // butiken får rullas
+    e.preventDefault();
+  },{passive:false});
+
+  document.getElementById('startBtn').addEventListener('click',function(){start();});
+  document.getElementById('againBtn').addEventListener('click',function(){start();});
+  elDemoBar.addEventListener('click',endDemo);
+  document.getElementById('shopBtn1').addEventListener('click',openShop);
+  document.getElementById('shopBtn2').addEventListener('click',openShop);
+  document.getElementById('shopClose').addEventListener('click',closeShop);
+  elCont.addEventListener('click',continueGame);
+  applyBg();showCoins();showContinue();
+
+  var last=0;
+  function frame(ms){
+    var now=ms/1000,dt=Math.min(.05,now-last||0);last=now;
+    update(dt);draw();
+    requestAnimationFrame(frame);
+  }
+  document.addEventListener('visibilitychange',function(){
+    last=performance.now()/1000;
+    if(document.hidden)pause();
+  });
+  resize();
+  requestAnimationFrame(frame);
+})();
+</script>
+<script>
+if('serviceWorker' in navigator){
+  window.addEventListener('load',function(){
+    navigator.serviceWorker.register('sw.js').catch(function(){});
+  });
+}
+</script>
+</body>
+</html>
